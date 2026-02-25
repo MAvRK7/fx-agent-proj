@@ -57,6 +57,14 @@ def analyze_fx():
     # Trend slope (last 7 days)
     slope = historical_data[-1] - historical_data[-8]
 
+    # Trend classification
+    if slope > 0:
+        trend = "strong_uptrend" if slope > (0.005 * current_rate) else "weak_uptrend"
+    elif slope < 0:
+        trend = "strong_downtrend" if slope < (-0.005 * current_rate) else "weak_downtrend"
+    else:
+        trend = "sideways"
+
     # Volatility (std dev of last 30 days)
     volatility = (
         sum((x - mean(historical_data[-30:])) ** 2 for x in historical_data[-30:]) / 30
@@ -87,6 +95,8 @@ def analyze_fx():
     else:
         risk = "low volatility (higher confidence)"
 
+    confidence = round(risk_band_confidence, 3)
+
     # IMPORTANT: These keys must match generate_response exactly
     return {
         "current_rate": current_rate,
@@ -94,11 +104,13 @@ def analyze_fx():
         "ma_30": latest_ma30,
         "momentum": momentum,
         "slope": slope,
+        "trend": trend,
         "volatility": volatility,
         "decision": decision,
         "prob_up": prob_up,
         "drift": drift,
         "risk_band_confidence": risk_band_confidence,
+        "confidence": confidence,
         "risk": risk,
         "forecast7d": forecast7d,
         "expected_7d": expected_future,

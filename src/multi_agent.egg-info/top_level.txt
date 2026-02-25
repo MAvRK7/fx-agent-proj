@@ -1,0 +1,6 @@
+analysis
+application
+config
+domain
+infrastructure
+utils

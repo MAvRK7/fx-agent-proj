@@ -1,0 +1,1 @@
+# pure business logic - no external deps

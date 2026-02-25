@@ -1,0 +1,15 @@
+Metadata-Version: 2.4
+Name: multi-agent
+Version: 0.1.0
+Summary: Production-grade extensible autonomous FX + multi-tool AI agent
+Requires-Python: >=3.11
+License-File: LICENSE
+Requires-Dist: pydantic>=2.10
+Requires-Dist: pydantic-settings>=2.7
+Requires-Dist: openai>=1.60
+Requires-Dist: mistralai>=1.0
+Requires-Dist: requests
+Requires-Dist: python-dotenv
+Requires-Dist: pytest
+Requires-Dist: pytest-cov
+Dynamic: license-file

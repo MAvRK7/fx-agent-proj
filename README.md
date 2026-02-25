@@ -58,7 +58,7 @@ Create a .env file in the project root:
 
 - OPENROUTER_API_KEY=your_key_here
 - MISTRAL_API_KEY=your_key_here
-- 
+
 ## 🖥️ Usage
 
 ▶ Running the API (FastAPI)
@@ -93,7 +93,7 @@ uvicorn app:app --reload --port 8000
 
 For direct terminal-based interaction:
 ```
-python agent-project.py
+python main.py
 ```
 
 ## 📊 Running Backtests
@@ -124,5 +124,5 @@ pytest --cov=src tests/
 
 This project is licensed under the LICENSE file included in this repository.
 
-## Contributions
-I am always open to contribution, feel free to reach me out or use this repo
+## 🤝 Contributions
+Contributions welcome. Feel free to reach me out or use this repo.

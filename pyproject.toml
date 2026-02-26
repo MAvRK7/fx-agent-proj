@@ -16,6 +16,9 @@ dependencies = [
     "pytest-cov",
 ]
 
+[tool.setuptools.packages.find]
+where = ["."]
+
 [tool.ruff]
 line-length = 100
 select = ["E", "F", "I", "B", "C4", "UP"]

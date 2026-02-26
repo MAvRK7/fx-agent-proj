@@ -120,6 +120,13 @@ The project uses pytest and includes CI/CD via GitHub Actions.
 pytest --cov=src tests/
 ```
 
+### Evaluation Summary 
+- **Evaluated:** 22  
+- **Accuracy:** 90.9% (20/22)  
+- **Average Confidence (Correct):** 0.542  
+- **Average Confidence (Wrong):** 0.518  
+- **Period:** 2026-01-06 to 2026-02-24
+
 ## ⚖️ License
 
 This project is licensed under the LICENSE file included in this repository.

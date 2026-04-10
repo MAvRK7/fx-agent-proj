@@ -1,33 +1,27 @@
 import streamlit as st
-import os
 import requests
-import json
-from typing import Optional
+import os
 from dotenv import load_dotenv
+from typing import Optional
 
 # ========================= CONFIG =========================
 st.set_page_config(
-    page_title="FX Agent • INR ↔ AUD & More",
+    page_title="FX Agent • Smart Currency Assistant",
     page_icon="💲",
     layout="centered",
     initial_sidebar_state="expanded"
 )
 
-#API_URL = "https://fx-agent.onrender.com"   
-# --------------------------
-# Load environment variables
-# --------------------------
 load_dotenv()
-# Use Streamlit secrets (preferred for deployed version) with fallback
+
+# Get backend URL - prefer Streamlit secrets, then .env, then default
 def get_backend_url():
     try:
-        return st.secrets["api"]["BASE_URL"].rstrip("/") + "/call"
-    except KeyError:
-        return os.getenv("API_URL", "https://fx-agent.onrender.com")
-    except Exception as e:
-        # Optional: log unexpected issues
-        print(f"Secrets error: {e}")
-        return os.getenv("API_URL", "https://fx-agent.onrender.com/call")
+        # For deployed Streamlit Cloud
+        return st.secrets["api"]["BASE_URL"].rstrip("/")
+    except Exception:
+        # For local development
+        return os.getenv("API_URL", "https://fx-agent.onrender.com").rstrip("/")
 
 API_URL = get_backend_url()
 
@@ -36,26 +30,27 @@ with st.sidebar:
     st.title("💲 FX Agent")
     st.markdown("### Autonomous Currency Assistant")
     
-    st.info(
-        "Ask anything about exchange rates, forecasts, or conversions.\n\n"
-        "Examples:\n"
-        "- Should I convert INR to AUD now?\n"
-        "- What's the current INR to USD rate?\n"
-        "- 38 lakh INR in AUD?\n"
-        "- How is the Indian economy?"
-    )
+    st.info("""
+    Ask anything about exchange rates and forecasts.
+
+    **Examples:**
+    - Should I convert INR to AUD now?
+    - Current INR to USD rate?
+    - 38 lakh INR in AUD?
+    - How is the Indian economy?
+    - !eval or cost summary
+    """)
     
     if st.button("🗑️ Clear Chat", use_container_width=True):
         st.session_state.messages = []
         st.session_state.session_id = None
         st.rerun()
 
-    st.caption("Backend: FastAPI on Render • Model: Gemma / Mistral fallback")
+    st.caption("Backend: FastAPI on Render • Gemma + Mistral fallback")
 
 # ========================= SESSION STATE =========================
 if "messages" not in st.session_state:
     st.session_state.messages = []
-
 if "session_id" not in st.session_state:
     st.session_state.session_id = None
 
@@ -65,53 +60,57 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # ========================= USER INPUT =========================
-if prompt := st.chat_input("Ask about currency rates, forecasts, or conversions..."):
+if prompt := st.chat_input("Ask about rates, forecasts, or type !eval / cost..."):
     
-    # Add user message
+    # Add user message to chat
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Show assistant thinking
+    # Show thinking spinner
     with st.chat_message("assistant"):
-        with st.spinner("Analyzing FX data..."):
+        with st.spinner("Thinking..."):
             try:
                 payload = {
                     "message": prompt,
                     "session_id": st.session_state.session_id
                 }
-                
+
                 response = requests.post(
                     f"{API_URL}/chat",
                     json=payload,
-                    timeout=60
+                    timeout=90
                 )
-                
+
                 if response.status_code == 200:
                     data = response.json()
-                    assistant_reply = data.get("response", "Sorry, I couldn't process that.")
+                    assistant_reply = data.get("response", "No response received.")
                     new_session_id = data.get("session_id")
-                    
+
                     if new_session_id:
                         st.session_state.session_id = new_session_id
-                    
+
                     st.markdown(assistant_reply)
                     
-                    # Save to history
+                    # Save assistant reply
                     st.session_state.messages.append({
-                        "role": "assistant", 
+                        "role": "assistant",
                         "content": assistant_reply
                     })
-                    
+
                 else:
-                    error_msg = f"Error {response.status_code}: {response.text}"
+                    error_msg = f"Error {response.status_code}: {response.text[:200]}"
                     st.error(error_msg)
                     st.session_state.messages.append({"role": "assistant", "content": error_msg})
-                    
+
             except requests.exceptions.RequestException as e:
-                error_msg = f"Connection error: {str(e)}\n\nMake sure the backend is running."
+                error_msg = f"❌ Connection error to backend.\n\n{str(e)}\n\nMake sure your Render backend is awake."
+                st.error(error_msg)
+                st.session_state.messages.append({"role": "assistant", "content": error_msg})
+            except Exception as e:
+                error_msg = f"Unexpected error: {str(e)}"
                 st.error(error_msg)
                 st.session_state.messages.append({"role": "assistant", "content": error_msg})
 
 # ========================= FOOTER =========================
-st.caption("Powered by your FX Agent • Session preserved across messages")
+st.caption("💲 FX Agent • Session maintained across messages • Powered by Render + Streamlit")

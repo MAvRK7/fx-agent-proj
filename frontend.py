@@ -73,21 +73,21 @@ with col_status:
         if st.session_state.last_ping:
             st.caption(f"Last ping: {st.session_state.last_ping}")
     else:
-        st.warning("⚪ Awake mode OFF (backend may sleep)")
+        st.warning("⚪ Awake mode OFF")
 
 # ========================= QUICK ACTION BUTTONS =========================
 col1, col2, col3, col4 = st.columns(4)
 with col1:
-    if st.button("📊 INR → AUD Now", use_container_width=True):
+    if st.button("📊 INR → AUD Now", use_container_width=True, key="btn_inr_aud"):
         st.session_state.pending_prompt = "Should I convert INR to AUD now?"
 with col2:
-    if st.button("💱 Current Rates", use_container_width=True):
+    if st.button("💱 Current Rates", use_container_width=True, key="btn_rates"):
         st.session_state.pending_prompt = "What are the current INR to AUD and INR to USD rates?"
 with col3:
-    if st.button("📈 Run Evaluation", use_container_width=True):
+    if st.button("📈 Run Evaluation", use_container_width=True, key="btn_eval"):
         st.session_state.pending_prompt = "!eval"
 with col4:
-    if st.button("💰 Cost Summary", use_container_width=True):
+    if st.button("💰 Cost Summary", use_container_width=True, key="btn_cost"):
         st.session_state.pending_prompt = "cost summary"
 
 # ========================= SIDEBAR =========================

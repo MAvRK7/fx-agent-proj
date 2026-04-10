@@ -1,7 +1,9 @@
 import streamlit as st
+import os
 import requests
 import json
 from typing import Optional
+from dotenv import load_dotenv
 
 # ========================= CONFIG =========================
 st.set_page_config(
@@ -11,7 +13,23 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-API_URL = "https://fx-agent.onrender.com"   # ← Change to your Render URL
+#API_URL = "https://fx-agent.onrender.com"   
+# --------------------------
+# Load environment variables
+# --------------------------
+load_dotenv()
+# Use Streamlit secrets (preferred for deployed version) with fallback
+def get_backend_url():
+    try:
+        return st.secrets["api"]["BASE_URL"].rstrip("/") + "/call"
+    except KeyError:
+        return os.getenv("API_URL", "https://fx-agent.onrender.com")
+    except Exception as e:
+        # Optional: log unexpected issues
+        print(f"Secrets error: {e}")
+        return os.getenv("API_URL", "https://fx-agent.onrender.com/call")
+
+API_URL = get_backend_url()
 
 # ========================= SIDEBAR =========================
 with st.sidebar:

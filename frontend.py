@@ -2,7 +2,6 @@ import streamlit as st
 import requests
 import os
 from dotenv import load_dotenv
-from typing import Optional
 
 # ========================= CONFIG =========================
 st.set_page_config(
@@ -14,31 +13,53 @@ st.set_page_config(
 
 load_dotenv()
 
-# Get backend URL - prefer Streamlit secrets, then .env, then default
 def get_backend_url():
     try:
-        # For deployed Streamlit Cloud
         return st.secrets["api"]["BASE_URL"].rstrip("/")
     except Exception:
-        # For local development
         return os.getenv("API_URL", "https://fx-agent.onrender.com").rstrip("/")
 
 API_URL = get_backend_url()
 
+# ========================= SESSION STATE =========================
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "session_id" not in st.session_state:
+    st.session_state.session_id = None
+
+# ========================= HEADER & QUICK ACTIONS =========================
+st.title("💲 FX Agent")
+st.markdown("**Autonomous Currency Analysis & Forecasting Assistant**")
+
+# Quick Action Buttons
+col1, col2, col3, col4 = st.columns(4)
+with col1:
+    if st.button("📊 INR → AUD Now", use_container_width=True):
+        st.session_state.quick_prompt = "Should I convert INR to AUD now?"
+with col2:
+    if st.button("💱 Current Rates", use_container_width=True):
+        st.session_state.quick_prompt = "What are the current INR to AUD and INR to USD rates?"
+with col3:
+    if st.button("📈 Run Evaluation", use_container_width=True):
+        st.session_state.quick_prompt = "!eval"
+with col4:
+    if st.button("💰 Cost Summary", use_container_width=True):
+        st.session_state.quick_prompt = "cost summary"
+
+# Auto-submit quick prompt if button was clicked
+if "quick_prompt" in st.session_state and st.session_state.quick_prompt:
+    prompt = st.session_state.quick_prompt
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    st.session_state.quick_prompt = None  # clear it
+
 # ========================= SIDEBAR =========================
 with st.sidebar:
-    st.title("💲 FX Agent")
-    st.markdown("### Autonomous Currency Assistant")
-    
     st.info("""
-    Ask anything about exchange rates and forecasts.
-
-    **Examples:**
-    - Should I convert INR to AUD now?
-    - Current INR to USD rate?
+    **Ask anything:**
+    - Should I send money from India to Australia?
     - 38 lakh INR in AUD?
-    - How is the Indian economy?
-    - !eval or cost summary
+    - How is the Indian / Aussie economy?
+    - When is the best time to convert in 2026?
     """)
     
     if st.button("🗑️ Clear Chat", use_container_width=True):
@@ -48,31 +69,30 @@ with st.sidebar:
 
     st.caption("Backend: FastAPI on Render • Gemma + Mistral fallback")
 
-# ========================= SESSION STATE =========================
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "session_id" not in st.session_state:
-    st.session_state.session_id = None
-
 # ========================= DISPLAY CHAT HISTORY =========================
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
 # ========================= USER INPUT =========================
-if prompt := st.chat_input("Ask about rates, forecasts, or type !eval / cost..."):
-    
-    # Add user message to chat
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
+if prompt := st.chat_input("Ask about exchange rates, forecasts, or conversions..."):
+    user_prompt = prompt
+else:
+    # Handle quick action buttons
+    user_prompt = st.session_state.get("quick_prompt")
 
-    # Show thinking spinner
+if user_prompt:
+    # Add user message
+    st.session_state.messages.append({"role": "user", "content": user_prompt})
+    with st.chat_message("user"):
+        st.markdown(user_prompt)
+
+    # Assistant response
     with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
+        with st.spinner("Analyzing market data & running simulations..."):
             try:
                 payload = {
-                    "message": prompt,
+                    "message": user_prompt,
                     "session_id": st.session_state.session_id
                 }
 
@@ -92,25 +112,26 @@ if prompt := st.chat_input("Ask about rates, forecasts, or type !eval / cost..."
 
                     st.markdown(assistant_reply)
                     
-                    # Save assistant reply
                     st.session_state.messages.append({
                         "role": "assistant",
                         "content": assistant_reply
                     })
 
                 else:
-                    error_msg = f"Error {response.status_code}: {response.text[:200]}"
+                    error_msg = f"Error {response.status_code}: {response.text[:300]}"
                     st.error(error_msg)
                     st.session_state.messages.append({"role": "assistant", "content": error_msg})
 
             except requests.exceptions.RequestException as e:
-                error_msg = f"❌ Connection error to backend.\n\n{str(e)}\n\nMake sure your Render backend is awake."
+                error_msg = f"❌ Cannot connect to backend.\n\n{str(e)}\n\nIs your Render service awake?"
                 st.error(error_msg)
                 st.session_state.messages.append({"role": "assistant", "content": error_msg})
             except Exception as e:
-                error_msg = f"Unexpected error: {str(e)}"
-                st.error(error_msg)
-                st.session_state.messages.append({"role": "assistant", "content": error_msg})
+                st.error(f"Unexpected error: {str(e)}")
 
 # ========================= FOOTER =========================
-st.caption("💲 FX Agent • Session maintained across messages • Powered by Render + Streamlit")
+st.divider()
+st.caption(
+    "💲 FX Agent • Monte Carlo + Technical Analysis • "
+    "Session preserved • Deployed on Render + Streamlit"
+)

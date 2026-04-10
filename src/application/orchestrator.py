@@ -1,6 +1,6 @@
 import json
 import time
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
 
 from src.config.settings import settings
 from src.infrastructure.llm.client import chat_with_fallback
@@ -13,7 +13,7 @@ from src.domain.models import AgentState
 
 def orchestrator(
     user_input: str,
-    conversation_history: List[Dict[str, Any]],
+    conversation_history: list[dict[str, Any]],
     state: Optional[AgentState] = None,
 ) -> str:
     """
@@ -64,6 +64,9 @@ Use the full tool result.
 4. After getting tool results, ALWAYS use them in final answer.
 Do NOT say "unable to access".
 Return plain text only.
+
+If tool calling fails repeatedly, respond with 
+a clear message and suggest the user try again later. No markdown.
 """
 
     # Ensure system message exists only once at top
@@ -79,7 +82,7 @@ Return plain text only.
     total_output_tokens = 0
     total_latency = 0.0
     model_used = settings.MODEL_PRIMARY
-    called_tools: List[str] = []
+    called_tools: list[str] = []
     fx_data: Optional[Dict] = None
     final_response: str = "No response generated."
     step = 0

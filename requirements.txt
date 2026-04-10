@@ -9,3 +9,4 @@ openai>=1.0.0
 mistralai>=0.1.0
 
 python-dotenv>=1.0.0
+pytest-cov

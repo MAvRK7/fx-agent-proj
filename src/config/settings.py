@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     OPENROUTER_API_KEY: str
     MISTRAL_API_KEY: str
 
-    MODEL_PRIMARY: str = "stepfun/step-3.5-flash:free"
+    MODEL_PRIMARY: str = "openrouter/free"
     MODEL_FALLBACK: str = "mistral-small-latest"
 
     # later add temperature, max_tokens, etc. per model

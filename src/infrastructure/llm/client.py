@@ -6,7 +6,8 @@ import sys
 from typing import Any, Dict, List, Optional
 
 from openai import OpenAI
-from mistralai import Mistral
+from mistralai.client import Mistral #Migrating to V2
+#from mistralai import Mistral
 from dotenv import load_dotenv
 import os
 
@@ -27,15 +28,15 @@ openrouter = OpenAI(
     api_key=OPENROUTER_API_KEY,
 )
 
-mistral = Mistral(
+mistral_client = Mistral(
     api_key=MISTRAL_API_KEY,
 )
 
 
 def chat_with_fallback(
     messages: List[Dict[str, Any]],
-    model_primary: str = "stepfun/step-3.5-flash:free",
-    tools: Optional[List[Dict]] = None,
+    model_primary: Optional[str] = None,
+    tools: Optional[list[dict]] = None,
     tool_choice: str = "auto",
     temperature: float = 0.7,
     max_tokens: Optional[int] = None,
@@ -81,7 +82,9 @@ def chat_with_fallback(
         return result
 
     except Exception as exc:
-        print(f"⚠️ OpenRouter failed: {exc}", file=sys.stderr)
+        print(f"⚠️ Primary model {model_primary} failed: {exc}", file=sys.stderr)
+        if "404" in str(exc) or "No endpoints" in str(exc):
+            print("Model no longer available — consider updating MODEL_PRIMARY")
 
         # Small backoff
         time.sleep(1 + random.random() * 2)
@@ -89,7 +92,7 @@ def chat_with_fallback(
         # ── FALLBACK: Mistral (no tool support) ─────────────────────────────
         start = time.time()
         try:
-            res = mistral.chat.complete(
+            res = mistral_client.chat.complete(
                 model="mistral-small-latest",
                 messages=messages,
                 temperature=temperature,

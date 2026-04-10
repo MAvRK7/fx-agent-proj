@@ -37,6 +37,7 @@ The system combines statistical rigor (volatility, drift, risk bands) with LLM-p
     ├── tests/                # Unit tests & coverage
     └── .github/workflows/    # CI/CD (GitHub Actions)
 ```
+---
 
 ## 🛠️ Installation
 
@@ -46,18 +47,31 @@ The system combines statistical rigor (volatility, drift, risk bands) with LLM-p
 git clone https://github.com/MAvRK7/agent-proj.git
 cd agent-proj
 ```
+### 2️⃣ Create and activate a virtual environment:
 
-### 2️⃣ Install dependencies
+```
+python -m venv venv
+source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
+```
+### 3️⃣ Install dependencies
 
 ```
 pip install -r requirements.txt
 ```
-### 3️⃣ Set up environment variables
+### 4️⃣ Set up environment variables
 
 Create a .env file in the project root:
 
 - OPENROUTER_API_KEY=your_key_here
 - MISTRAL_API_KEY=your_key_here
+
+### 5️⃣ Run the application:
+
+```
+python main.py
+```
+
+---
 
 ## 🖥️ Usage
 

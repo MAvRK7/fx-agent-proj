@@ -5,6 +5,9 @@
 
 # 🤖 Multi-Currency FX Analysis Agent
 
+<img width="1440" height="667" alt="image" src="https://github.com/user-attachments/assets/7c83b8be-7094-4570-8037-9e5db471d879" />
+
+
 An autonomous, AI-powered financial assistant designed to analyze exchange rates, perform Monte Carlo simulations, and provide actionable "buy/sell" recommendations for **any currency pair**.
 
 The system combines statistical rigor (volatility, drift, risk bands) with LLM-powered reasoning to help users time their currency exchanges effectively.

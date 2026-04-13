@@ -118,37 +118,37 @@ if "pending_prompt" in st.session_state and st.session_state.pending_prompt:
     st.session_state.pending_prompt = None
 
     st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
 
-    with st.chat_message("assistant"):
-        with st.spinner("Waking up backend & analyzing..."):
-            try:
-                payload = {"message": prompt, "session_id": st.session_state.session_id}
+    with st.spinner("Waking up backend & analyzing..."):
+        try:
+            payload = {"message": prompt, "session_id": st.session_state.session_id}
                 
-                response = requests.post(f"{API_URL}/chat", json=payload, timeout=120)
+            response = requests.post(f"{API_URL}/chat", json=payload, timeout=120)
 
-                if response.status_code == 200:
-                    data = response.json()
-                    assistant_reply = data.get("response", "No response")
-                    if data.get("session_id"):
-                        st.session_state.session_id = data["session_id"]
+            if response.status_code == 200:
+                data = response.json()
+                assistant_reply = data.get("response", "No response")
+                if data.get("session_id"):
+                    st.session_state.session_id = data["session_id"]
 
-                    st.session_state.messages.append({
-                        "role": "assistant",
-                        "content": assistant_reply
-                    })
-                    st.rerun()
-                else:
-                    st.error(f"Backend error ({response.status_code})")
-                    st.session_state.messages.append({"role": "assistant", "content": f"Error {response.status_code}"})
-                    
-            except requests.exceptions.RequestException:
-                st.error("⚠️ Backend is sleeping (502). Please wait 10–20 seconds and try again.")
                 st.session_state.messages.append({
-                    "role": "assistant", 
-                    "content": "⚠️ The backend is waking up from sleep. Please try again in 15 seconds."
+                    "role": "assistant",
+                    "content": assistant_reply
                 })
+                st.rerun()
+            else:
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": f"Error {response.status_code}"
+                })
+        
+                    
+        except requests.exceptions.RequestException:
+            st.error("⚠️ Backend is sleeping (502). Please wait 10–20 seconds and try again.")
+            st.session_state.messages.append({
+                "role": "assistant", 
+                "content": "⚠️ The backend is waking up from sleep. Please try again in 15 seconds."
+            })
 
 # ========================= DISPLAY CHAT HISTORY =========================
 for message in st.session_state.messages:
@@ -158,33 +158,31 @@ for message in st.session_state.messages:
 # ========================= NORMAL CHAT INPUT =========================
 if prompt := st.chat_input("Ask about exchange rates, forecasts, or conversions..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
 
-    with st.chat_message("assistant"):
-        with st.spinner("Analyzing market data & running simulations..."):
-            try:
-                payload = {"message": prompt, "session_id": st.session_state.session_id}
-                response = requests.post(f"{API_URL}/chat", json=payload, timeout=120)
+   
+    with st.spinner("Analyzing market data & running simulations..."):
+        try:
+            payload = {"message": prompt, "session_id": st.session_state.session_id}
+            response = requests.post(f"{API_URL}/chat", json=payload, timeout=120)
 
-                if response.status_code == 200:
-                    data = response.json()
-                    assistant_reply = data.get("response", "No response received.")
-                    if data.get("session_id"):
-                        st.session_state.session_id = data["session_id"]
-                    st.session_state.messages.append({
-                        "role": "assistant",
-                        "content": assistant_reply
-                    })
-                    st.rerun()
-                else:
-                    st.error(f"Backend returned error {response.status_code}")
-            except requests.exceptions.RequestException:
-                st.error("⚠️ Backend is sleeping. Wait 10–20 seconds and try again.")
+            if response.status_code == 200:
+                data = response.json()
+                assistant_reply = data.get("response", "No response received.")
+                if data.get("session_id"):
+                    st.session_state.session_id = data["session_id"]
                 st.session_state.messages.append({
-                    "role": "assistant", 
-                    "content": "The backend is waking up. Please wait a moment and try again."
+                    "role": "assistant",
+                    "content": assistant_reply
                 })
+                st.rerun()
+            else:
+                st.error(f"Backend returned error {response.status_code}")
+        except requests.exceptions.RequestException:
+            st.error("⚠️ Backend is sleeping. Wait 10–20 seconds and try again.")
+            st.session_state.messages.append({
+                "role": "assistant", 
+                "content": "The backend is waking up. Please wait a moment and try again."
+            })
 
 # ========================= FOOTER =========================
 st.divider()

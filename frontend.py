@@ -134,8 +134,11 @@ if "pending_prompt" in st.session_state and st.session_state.pending_prompt:
                     if data.get("session_id"):
                         st.session_state.session_id = data["session_id"]
 
-                    st.markdown(assistant_reply)
-                    st.session_state.messages.append({"role": "assistant", "content": assistant_reply})
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": assistant_reply
+                    })
+                    st.rerun()
                 else:
                     st.error(f"Backend error ({response.status_code})")
                     st.session_state.messages.append({"role": "assistant", "content": f"Error {response.status_code}"})
@@ -169,8 +172,11 @@ if prompt := st.chat_input("Ask about exchange rates, forecasts, or conversions.
                     assistant_reply = data.get("response", "No response received.")
                     if data.get("session_id"):
                         st.session_state.session_id = data["session_id"]
-                    st.markdown(assistant_reply)
-                    st.session_state.messages.append({"role": "assistant", "content": assistant_reply})
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": assistant_reply
+                    })
+                    st.rerun()
                 else:
                     st.error(f"Backend returned error {response.status_code}")
             except requests.exceptions.RequestException:

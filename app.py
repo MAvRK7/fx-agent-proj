@@ -7,11 +7,13 @@ from pydantic import BaseModel
 from typing import Optional, Dict
 import uuid
 
-from infrastructure.logging import logger
+import logging
 from src.application.orchestrator import orchestrator
 from src.domain.models import AgentState
 from src.application.services.evaluation_service import run_evaluation
 from src.utils.pricing import summarize_costs
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="FX Agent API",

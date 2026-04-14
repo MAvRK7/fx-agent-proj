@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from typing import Optional, Dict
 import uuid
 
+from infrastructure.logging import logger
 from src.application.orchestrator import orchestrator
 from src.domain.models import AgentState
 from src.application.services.evaluation_service import run_evaluation
@@ -52,17 +53,58 @@ async def chat(request: ChatRequest = Body(...)):
     state = sessions[session_id]
 
     try:
-        response_text = orchestrator(
-            user_input=request.message,
-            conversation_history=state.conversation_history,
-            state=state
-        )
+        user_input = request.message.strip().lower()
+
+        # ================= COMMAND HANDLING =================
+
+        if "cost" in user_input and "summary" in user_input or user_input in ('cost', 'costs', 'summary'):
+            summary = summarize_costs()
+            response_text = f"""
+    💰 **Cost Summary**
+
+    - Total cost: ${summary['total_cost_usd']:.4f}
+    - Avg/query: ${summary['average_cost_per_query_usd']:.6f}
+    - Total queries: {summary['total_queries']}
+    - Projected monthly: ${summary['projected_monthly_cost_usd']:.4f}
+    - Last updated: {summary['last_updated']}
+    """
+
+        elif user_input.startswith('!eval') or user_input.startswith('!evaluation') or user_input.startswith('!backtest'):
+            result = run_evaluation(backtest=True)
+
+            response_text = f"""
+    📊 **Evaluation Summary**
+
+    - Evaluated: {result.get('total_predictions_evaluated', 0)}
+    - Accuracy: {result.get('accuracy_pct', 0.0)}%
+    - Correct: {result.get('correct', 0)}
+
+    - Avg confidence (correct): {result.get('avg_conf_correct', 0.0)}
+    - Avg confidence (wrong): {result.get('avg_conf_wrong', 0.0)}
+
+    {f"Note: {result['message']}" if "message" in result else ""}
+    {f"Period: {result['backtest_period']}" if "backtest_period" in result else ""}
+    """
+
+        else:
+            # ================= NORMAL FLOW =================
+            response_text = orchestrator(
+                user_input=request.message,
+                conversation_history=state.conversation_history,
+                state=state
+            )
+
         return ChatResponse(
             response=response_text,
             session_id=session_id
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Agent error")
+        return ChatResponse(
+            response=f"⚠️ Error: {type(e).__name__}",
+            session_id=session_id
+        )
+
 
 
 @app.get("/cost-summary")

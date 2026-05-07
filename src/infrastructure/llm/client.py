@@ -6,8 +6,8 @@ import sys
 from typing import Any, Dict, List, Optional
 
 from openai import OpenAI
-from mistralai.client import Mistral #Migrating to V2
-#from mistralai import Mistral
+from mistralai.client import Mistral  # Migrating to V2
+# from mistralai import Mistral
 from dotenv import load_dotenv
 import os
 
@@ -42,79 +42,85 @@ def chat_with_fallback(
     max_tokens: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
-    Primary LLM call with fallback to Mistral.
-    Supports tool calling (OpenRouter compatible).
+    Primary LLM call with fallback to OpenRouter.
+    Supports tool calling (Mistral compatible).
     Returns unified response format including tool_calls when present.
     """
-    payload = {
-        "model": model_primary,
-        "messages": messages,
-        "temperature": temperature,
-    }
-
-    if tools is not None:
-        payload["tools"] = tools
-        payload["tool_choice"] = tool_choice
-
-    if max_tokens is not None:
-        payload["max_tokens"] = max_tokens
-
+    # ── PRIMARY: Mistral ────────────────────────────────────────────────
     try:
-        # ── PRIMARY: OpenRouter ─────────────────────────────────────────────
         start = time.time()
-        response = openrouter.chat.completions.create(**payload)
+
+        # Mistral uses 'tools' and 'tool_choice' in the same way
+        kwargs: Dict[str, Any] = {
+            "model": model_primary or "mistral-small-latest",
+            "messages": messages,
+            "temperature": temperature,
+            "stream": False,
+        }
+        if max_tokens is not None:
+            kwargs["max_tokens"] = max_tokens
+        if tools is not None:
+            kwargs["tools"] = tools
+            kwargs["tool_choice"] = tool_choice
+
+        response = mistral_client.chat.complete(**kwargs)
         latency = time.time() - start
 
         msg = response.choices[0].message
 
-        result = {
+        return {
             "content": msg.content,
-            "tool_calls": msg.tool_calls,  # list or None
+            "tool_calls": getattr(msg, "tool_calls", None),  # list or None
             "tokens": {
                 "input": response.usage.prompt_tokens or 0,
                 "output": response.usage.completion_tokens or 0,
                 "total": response.usage.total_tokens or 0,
             },
             "latency": latency,
-            "model": model_primary,
+            "model": kwargs["model"],
         }
 
-        return result
-
     except Exception as exc:
-        print(f"⚠️ Primary model {model_primary} failed: {exc}", file=sys.stderr)
-        if "404" in str(exc) or "No endpoints" in str(exc):
-            print("Model no longer available — consider updating MODEL_PRIMARY")
+        print(f"⚠️ Primary model {model_primary or 'mistral-small-latest'} failed: {exc}", file=sys.stderr)
 
         # Small backoff
         time.sleep(1 + random.random() * 2)
 
-        # ── FALLBACK: Mistral (no tool support) ─────────────────────────────
+        # ── FALLBACK: OpenRouter ────────────────────────────────────────────
         start = time.time()
         try:
-            res = mistral_client.chat.complete(
-                model="mistral-small-latest",
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                stream=False,
-            )
+            payload = {
+                "model": model_primary,  # whatever free model you pass in
+                "messages": messages,
+                "temperature": temperature,
+            }
+            if tools is not None:
+                payload["tools"] = tools
+                payload["tool_choice"] = tool_choice
+            if max_tokens is not None:
+                payload["max_tokens"] = max_tokens
+
+            res = openrouter.chat.completions.create(**payload)
             latency = time.time() - start
 
+            msg = res.choices[0].message
+
             return {
-                "content": res.choices[0].message.content,
-                "tool_calls": None,
+                "content": msg.content,
+                "tool_calls": msg.tool_calls,  # list or None
                 "tokens": {
                     "input": res.usage.prompt_tokens or 0,
                     "output": res.usage.completion_tokens or 0,
                     "total": res.usage.total_tokens or 0,
                 },
                 "latency": latency,
-                "model": "mistral-small-latest",
+                "model": model_primary,
             }
 
         except Exception as fallback_exc:
-            print(f"❌ Mistral fallback also failed: {fallback_exc}", file=sys.stderr)
+            if "404" in str(fallback_exc) or "No endpoints" in str(fallback_exc):
+                print("Model no longer available — consider updating MODEL_PRIMARY")
+            print(f"❌ OpenRouter fallback also failed: {fallback_exc}", file=sys.stderr)
             raise RuntimeError("Both LLM providers failed") from fallback_exc
 
 

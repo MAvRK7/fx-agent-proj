@@ -32,6 +32,9 @@ if "keep_awake" not in st.session_state:
     st.session_state.keep_awake = False   # Default: OFF
 if "last_ping" not in st.session_state:
     st.session_state.last_ping = None
+# NEW: track what we've already processed so we don't re-process on rerun
+if "processed_prompt" not in st.session_state:
+    st.session_state.processed_prompt = None
 
 # Background ping function
 def keep_backend_awake():
@@ -108,58 +111,67 @@ with st.sidebar:
     if st.button("🗑️ Clear Chat", use_container_width=True):
         st.session_state.messages = []
         st.session_state.session_id = None
+        st.session_state.pending_prompt = None
+        st.session_state.processed_prompt = None
         st.rerun()
 
     st.caption("Backend: FastAPI on Render\nModel: Gemma + Mistral fallback")
-
-# ========================= PROCESS PENDING PROMPT (Buttons) =========================
-if "pending_prompt" in st.session_state and st.session_state.pending_prompt:
-    prompt = st.session_state.pending_prompt
-    st.session_state.pending_prompt = None
-
-    st.session_state.messages.append({"role": "user", "content": prompt})
-
-    with st.spinner("Waking up backend & analyzing..."):
-        try:
-            payload = {"message": prompt, "session_id": st.session_state.session_id}
-                
-            response = requests.post(f"{API_URL}/chat", json=payload, timeout=120)
-
-            if response.status_code == 200:
-                data = response.json()
-                assistant_reply = data.get("response", "No response")
-                if data.get("session_id"):
-                    st.session_state.session_id = data["session_id"]
-
-                st.session_state.messages.append({
-                    "role": "assistant",
-                    "content": assistant_reply
-                })
-                st.rerun()
-            else:
-                st.session_state.messages.append({
-                    "role": "assistant",
-                    "content": f"Error {response.status_code}"
-                })
-        
-                    
-        except requests.exceptions.RequestException:
-            st.error("⚠️ Backend is sleeping (502). Please wait 10–20 seconds and try again.")
-            st.session_state.messages.append({
-                "role": "assistant", 
-                "content": "⚠️ The backend is waking up from sleep. Please try again in 15 seconds."
-            })
 
 # ========================= DISPLAY CHAT HISTORY =========================
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
+# ========================= PROCESS PENDING PROMPT (Buttons) =========================
+# FIX: only process if there's a pending prompt AND we haven't already processed it
+if "pending_prompt" in st.session_state and st.session_state.pending_prompt:
+    prompt = st.session_state.pending_prompt
+    
+    # Skip if we already handled this exact prompt in a previous run
+    if st.session_state.processed_prompt == prompt:
+        # Already done, leave it in the chat history but don't re-send
+        pass
+    else:
+        # Mark as processed FIRST so if rerun happens mid-flight we don't double-send
+        st.session_state.processed_prompt = prompt
+        
+        st.session_state.messages.append({"role": "user", "content": prompt})
+
+        with st.spinner("Waking up backend & analyzing..."):
+            try:
+                payload = {"message": prompt, "session_id": st.session_state.session_id}
+                response = requests.post(f"{API_URL}/chat", json=payload, timeout=120)
+
+                if response.status_code == 200:
+                    data = response.json()
+                    assistant_reply = data.get("response", "No response")
+                    if data.get("session_id"):
+                        st.session_state.session_id = data["session_id"]
+
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": assistant_reply
+                    })
+                    st.rerun()
+                else:
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": f"Error {response.status_code}"
+                    })
+                    st.rerun()
+
+            except requests.exceptions.RequestException:
+                st.error("⚠️ Backend is sleeping (502). Please wait 10–20 seconds and try again.")
+                st.session_state.messages.append({
+                    "role": "assistant", 
+                    "content": "⚠️ The backend is waking up from sleep. Please try again in 15 seconds."
+                })
+                st.rerun()
+
 # ========================= NORMAL CHAT INPUT =========================
 if prompt := st.chat_input("Ask about exchange rates, forecasts, or conversions..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-   
     with st.spinner("Analyzing market data & running simulations..."):
         try:
             payload = {"message": prompt, "session_id": st.session_state.session_id}
